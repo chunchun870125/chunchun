@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修仙模拟器 - Roguelike</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', sans-serif; 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 950px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 { font-size: 2.2em; color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+        .header p { color: #aaa; margin-top: 8px; }
+        
+        .panel { 
+            background: rgba(255,255,255,0.05); 
+            border-radius: 12px; 
+            padding: 18px; 
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stats { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .stat-item { text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .stat-label { font-size: 0.75em; color: #aaa; }
+        .stat-value { font-size: 1.2em; font-weight: bold; }
+        .stat-value.hp { color: #ff6b6b; }
+        .stat-value.atk { color: #ffd700; }
+        .stat-value.def { color: #4ecdc4; }
+        .stat-value.lv { color: #a855f7; }
+        .stat-value.power { color: #f472b6; }
+        .stat-value.life { color: #ef4444; }
+        .stat-value.age { color: #fbbf24; }
+        
+        .story-panel { 
+            min-height: 100px; 
+            background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(168,85,247,0.1) 100%);
+            border-left: 4px solid #ffd700;
+        }
+        .story-text { font-size: 1.05em; line-height: 1.7; color: #e0e0e0; }
+        .story-text .highlight { color: #ffd700; }
+        .story-text .danger { color: #ff6b6b; }
+        .story-text .success { color: #4ecdc4; }
+        .story-text .technique { color: #a855f7; }
+        .story-text .pill { color: #f472b6; }
+        .story-text .weapon { color: #f97316; }
+        .story-text .armor { color: #3b82f6; }
+        .story-text .treasure { color: #fbbf24; }
+        
+        .actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .btn { 
+            padding: 10px 12px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .btn-primary { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #1a1a2e; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,215,0,0.3); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+        .btn-danger { background: linear-gradient(135deg, #ff6b6b, #c0392b); color: #fff; }
+        .btn-danger:hover { transform: translateY(-2px); }
+        .btn-purple { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; }
+        .btn-purple:hover { transform: translateY(-2px); }
+        .btn-orange { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; }
+        .btn-orange:hover { transform: translateY(-2px); }
+        .btn-green { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+        .btn-green:hover { transform: translateY(-2px); }
+        .btn-cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); color: #fff; }
+        .btn-cyan:hover { transform: translateY(-2px); }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 25px;
+            border-radius: 16px;
+            border: 2px solid #ffd700;
+            max-width: 700px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .modal h2 { color: #ffd700; margin-bottom: 15px; }
+        .modal p { color: #aaa; margin-bottom: 15px; }
+        .reward-points { font-size: 1.8em; color: #4ecdc4; font-weight: bold; }
+        .upgrade-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px; 
+            background: rgba(255,255,255,0.05); 
+            border-radius: 8px; 
+            margin-bottom: 8px;
+        }
+        .upgrade-btn { 
+            padding: 6px 14px; 
+            background: rgba(78, 205, 196, 0.2); 
+            border: 1px solid #4ecdc4;
+            color: #4ecdc4;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .upgrade-btn:hover:not(:disabled) { background: rgba(78, 205, 196, 0.3); }
+        .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .timeline { 
+            display: flex; 
+            overflow-x: auto; 
+            padding: 8px 0; 
+            gap: 8px;
+        }
+        .timeline-item { 
+            flex-shrink: 0;
+            padding: 6px 14px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        .timeline-item.current { background: rgba(255,215,0,0.3); color: #ffd700; }
+        .timeline-item.danger { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+        
+        .hidden { display: none; }
+        
+        .log-panel {
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 0.85em;
+            color: #aaa;
+            line-height: 1.5;
+        }
+        .log-entry { margin-bottom: 4px; }
+        .log-entry.new { color: #4ecdc4; }
+        
+        .tab-container { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab-btn { 
+            flex: 1; 
+            padding: 8px; 
+            background: rgba(255,255,255,0.05); 
+            border: none; 
+            color: #aaa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        .tab-btn.active { background: rgba(255,215,0,0.2); color: #ffd700; }
+        .tab-btn:hover { background: rgba(255,255,255,0.1); }
+        
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+        }
+        .inventory-item.pill { border-left: 3px solid #f472b6; }
+        .inventory-item.technique { border-left: 3px solid #a855f7; }
+        .inventory-item.weapon { border-left: 3px solid #f97316; }
+        .inventory-item.armor { border-left: 3px solid #3b82f6; }
+        .inventory-item.treasure { border-left: 3px solid #fbbf24; }
+        .inventory-item.equipped { background: rgba(168, 85, 247, 0.2); }
+        .item-name { color: #fff; }
+        .item-desc { color: #888; font-size: 0.8em; }
+        .item-count { color: #ffd700; }
+        
+        .use-btn, .equip-btn, .cultivate-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75em;
+        }
+        .use-btn { background: rgba(244, 114, 182, 0.2); border: 1px solid #f472b6; color: #f472b6; }
+        .equip-btn { background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #a855f7; }
+        .cultivate-btn { background: rgba(79, 205, 196, 0.2); border: 1px solid #4ecdc4; color: #4ecdc4; }
+        .use-btn:hover, .equip-btn:hover, .cultivate-btn:hover { opacity: 0.8; }
+        
+        .technique-slots, .equipment-slots {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .technique-slots { grid-template-columns: repeat(3, 1fr); }
+        .equipment-slots { grid-template-columns: repeat(3, 1fr); }
+        
+        .technique-slot, .equipment-slot {
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 8px;
+            text-align: center;
+            min-height: 65px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .technique-slot.filled { border-style: solid; border-color: #a855f7; }
+        .equipment-slot.filled { border-style: solid; border-color: #ffd700; }
+        .slot-name { font-weight: bold; font-size: 0.9em; }
+        .technique-slot .slot-name { color: #a855f7; }
+        .equipment-slot .slot-name { color: #ffd700; }
+        .slot-level { color: #ffd700; font-size: 0.8em; }
+        .slot-bonus { color: #4ecdc4; font-size: 0.75em; }
+        .slot-type { color: #888; font-size: 0.75em; }
+        
+        .empty-text { color: #666; font-size: 0.9em; text-align: center; padding: 15px; }
+        
+        /* 秘境相关样式 */
+        .realm-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .realm-item {
+            padding: 12px 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .realm-item:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+        .realm-item.locked { opacity: 0.5; cursor: not-allowed; }
+        .realm-item.current { border-color: #ffd700; background: rgba(255,215,0,0.1); }
+        .realm-name { color: #ffd700; font-weight: bold; font-size: 0.9em; }
+        .realm-level { color: #888; font-size: 0.75em; }
+        .realm-reward { color: #4ecdc4; font-size: 0.7em; }
+        
+        /* 分支选择样式 */
+        .branch-choices { display: grid; gap: 10px; margin-top: 15px; }
+        .branch-btn {
+            padding: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        .branch-btn:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; }
+        
+        /* Boss战样式 */
+        .boss-info {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(168, 85, 247, 0.1));
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .boss-name { color: #ef4444; font-size: 1.3em; font-weight: bold; }
+        .boss-stats { color: #ffd700; margin-top: 8px; }
+        
+        /* 存档列表样式 */
+        .save-list { display: grid; gap: 10px; margin-top: 15px; }
+        .save-item {
+            padding: 15px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        .save-item:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; }
+        .save-name { color: #ffd700; font-weight: bold; }
+        .save-info { color: #888; font-size: 0.85em; margin-top: 5px; }
+        .save-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .save-btn-small { padding: 5px 12px; border-radius: 4px; font-size: 0.8em; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>修仙模拟器</h1>
+            <p>渡劫重生，逆天而行</p>
+        </div>
+        
+        <div class="panel stats">
+            <div class="stat-item"><div class="stat-label">境界</div><div class="stat-value lv" id="level">炼气一层</div></div>
+            <div class="stat-item"><div class="stat-label">生命值</div><div class="stat-value hp" id="hp">100/100</div></div>
+            <div class="stat-item"><div class="stat-label">攻击力</div><div class="stat-value atk" id="attack">10</div></div>
+            <div class="stat-item"><div class="stat-label">防御力</div><div class="stat-value def" id="defense">5</div></div>
+            <div class="stat-item"><div class="stat-label">功法加成</div><div class="stat-value power" id="techniquePower">+0</div></div>
+            <div class="stat-item"><div class="stat-label">装备加成</div><div class="stat-value power" id="equipPower">+0</div></div>
+            <div class="stat-item"><div class="stat-label">寿命</div><div class="stat-value life" id="lifespan">100/100</div></div>
+        </div>
+        
+        <div class="panel timeline">
+            <div class="timeline-item current" id="day">第1年</div>
+            <div class="timeline-item" id="totalYears">总年数: 0</div>
+            <div class="timeline-item" id="rebirths">重生: 0</div>
+            <div class="timeline-item" id="points">仙缘点: 0</div>
+            <div class="timeline-item" id="currentRealm">未进入秘境</div>
+            <div class="timeline-item" id="saveSlot">存档: 未选择</div>
+        </div>
+        
+        <div class="panel story-panel">
+            <div class="story-text" id="story">
+                你睁开双眼，发现自己身处一座深山之中。灵气稀薄，但你能感受到体内微弱的灵力在流动。<br>
+                <span class="highlight">这是你踏上修仙之路的第一年。</span>
+            </div>
+        </div>
+        
+        <div class="panel" id="mainActions">
+            <div class="actions">
+                <button class="btn btn-orange" id="btnRealm">探索秘境</button>
+                <button class="btn btn-secondary" id="btnMeditate">打坐修炼</button>
+                <button class="btn btn-purple" id="btnInventory">背包 (<span id="invCount">0</span>)</button>
+                <button class="btn btn-cyan" id="btnSave">存档管理</button>
+                <button class="btn btn-danger" id="btnRebirth">渡劫重生</button>
+            </div>
+        </div>
+        
+        <div class="panel" id="realmActions" style="display: none;">
+            <div class="actions">
+                <button class="btn btn-green" id="btnContinueExplore">继续探索</button>
+                <button class="btn btn-secondary" id="btnViewBranches">查看岔路</button>
+                <button class="btn btn-danger" id="btnExitRealm">离开秘境</button>
+            </div>
+        </div>
+        
+        <div class="panel" id="branchPanel" style="display: none;">
+            <h3 style="color: #ffd700; margin-bottom: 10px;">岔路选择</h3>
+            <div class="branch-choices" id="branchChoices"></div>
+        </div>
+        
+        <div class="panel" id="techniquePanel">
+            <h3 style="color: #ffd700; margin-bottom: 8px;">功法修炼 (消耗1年寿命)</h3>
+            <div class="technique-slots" id="techniqueSlots"></div>
+        </div>
+        
+        <div class="panel">
+            <h3 style="color: #ffd700; margin-bottom: 8px;">装备</h3>
+            <div class="equipment-slots" id="equipmentSlots"></div>
+        </div>
+        
+        <div class="panel">
+            <h3 style="color: #ffd700; margin-bottom: 8px;">修行日志</h3>
+            <div class="log-panel" id="log"></div>
+        </div>
+    </div>
+    
+    <!-- 死亡/重生弹窗 -->
+    <div class="modal-overlay hidden" id="deathModal">
+        <div class="modal">
+            <h2 id="deathTitle">渡劫失败</h2>
+            <p id="deathReason">你的仙途在此终结...</p>
+            <p>本次存活: <span class="reward-points" id="survivedYears">0</span> 年</p>
+            <p>获得仙缘点: <span class="reward-points" id="earnedPoints">0</span></p>
+            <div style="margin-top: 15px; text-align: left;">
+                <h4 style="color: #4ecdc4; margin-bottom: 10px;">消耗仙缘点提升初始属性</h4>
+                <div class="upgrade-item"><span>初始生命 +20</span><button class="upgrade-btn" id="upgradeHp" data-cost="5">5 点</button></div>
+                <div class="upgrade-item"><span>初始攻击 +3</span><button class="upgrade-btn" id="upgradeAtk" data-cost="5">5 点</button></div>
+                <div class="upgrade-item"><span>初始防御 +2</span><button class="upgrade-btn" id="upgradeDef" data-cost="5">5 点</button></div>
+                <div class="upgrade-item"><span>初始寿命 +50</span><button class="upgrade-btn" id="upgradeLife" data-cost="8">8 点</button></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top: 15px;" id="btnRebirthConfirm">重生轮回</button>
+        </div>
+    </div>
+    
+    <!-- 背包弹窗 -->
+    <div class="modal-overlay hidden" id="inventoryModal">
+        <div class="modal">
+            <h2>背包</h2>
+            <div class="tab-container">
+                <button class="tab-btn active" id="tabPills">丹药</button>
+                <button class="tab-btn" id="tabTechniques">功法</button>
+                <button class="tab-btn" id="tabWeapons">武器</button>
+                <button class="tab-btn" id="tabArmors">防具</button>
+                <button class="tab-btn" id="tabTreasures">法宝</button>
+            </div>
+            <div id="inventoryContent"><div class="empty-text">背包空空如也</div></div>
+            <button class="btn btn-secondary" style="margin-top: 15px;" id="btnCloseInventory">关闭</button>
+        </div>
+    </div>
+    
+    <!-- 秘境选择弹窗 -->
+    <div class="modal-overlay hidden" id="realmModal">
+        <div class="modal">
+            <h2>选择秘境</h2>
+            <p style="font-size: 0.9em;">击败秘境BOSS可获得珍贵奖励，难度越高奖励越丰厚<br>每次探索消耗 <span style="color:#ef4444;">1年寿命</span></p>
+            <div class="realm-list" id="realmList"></div>
+            <button class="btn btn-secondary" style="margin-top: 15px;" id="btnCloseRealm">返回</button>
+        </div>
+    </div>
+    
+    <!-- 存档管理弹窗 -->
+    <div class="modal-overlay hidden" id="saveModal">
+        <div class="modal">
+            <h2>存档管理</h2>
+            <div class="save-list" id="saveList"></div>
+            <button class="btn btn-primary" style="margin-top: 15px;" id="btnNewSave">新建存档</button>
+            <button class="btn btn-secondary" style="margin-top: 10px;" id="btnCloseSave">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        const realms = ['炼气一层','炼气二层','炼气三层','炼气四层','炼气五层','筑基一层','筑基二层','筑基三层','筑基四层','筑基五层','金丹期','元婴期','化神期','炼虚期','合体期','大乘期','渡劫期'];
+        
+        // 不同境界的寿命加成
+        const realmLifespanBonus = [100, 110, 120, 130, 140, 200, 220, 240, 260, 280, 400, 500, 600, 800, 1000, 1500, 3000];
+        
+        // 丹药数据
+        const pills = [
+            { id: 'hp_small', name: '疗伤丹', desc: '恢复30点生命', effect: 'hp', value: 30, color: '#ff6b6b' },
+            { id: 'hp_medium', name: '回春丹', desc: '恢复50点生命', effect: 'hp', value: 50, color: '#ff8787' },
+            { id: 'hp_large', name: '九转还魂丹', desc: '恢复100点生命', effect: 'hp', value: 100, color: '#ff5252' },
+            { id: 'life_small', name: '延寿丹', desc: '增加10年寿命', effect: 'life', value: 10, color: '#ef4444' },
+            { id: 'life_medium', name: '长生丹', desc: '增加30年寿命', effect: 'life', value: 30, color: '#dc2626' },
+            { id: 'atk_small', name: '聚灵丹', desc: '永久+3攻击', effect: 'atk', value: 3, color: '#ffd700' },
+            { id: 'atk_medium', name: '天元丹', desc: '永久+8攻击', effect: 'atk', value: 8, color: '#ffb700' },
+            { id: 'def_small', name: '护体丹', desc: '永久+2防御', effect: 'def', value: 2, color: '#4ecdc4' },
+            { id: 'def_medium', name: '金刚丹', desc: '永久+5防御', effect: 'def', value: 5, color: '#26d9d9' }
+        ];
+        
+        // 功法数据
+        const techniques = [
+            { id: 'basic_fist', name: '基础拳法', desc: '入门级功法', atkBonus: 2, defBonus: 0, maxLevel: 10, color: '#a855f7' },
+            { id: 'iron_body', name: '金钟罩', desc: '增强防御', atkBonus: 0, defBonus: 3, maxLevel: 10, color: '#8b5cf6' },
+            { id: 'fire_fist', name: '烈火拳', desc: '火属性攻击', atkBonus: 4, defBonus: 1, maxLevel: 10, color: '#f97316' },
+            { id: 'ice_shield', name: '玄冰盾', desc: '冰属性防御', atkBonus: 1, defBonus: 4, maxLevel: 10, color: '#06b6d4' },
+            { id: 'dragon_strike', name: '龙吟击', desc: '高伤害输出', atkBonus: 6, defBonus: 2, maxLevel: 10, color: '#ef4444' },
+            { id: 'heavenly_shield', name: '天罗护法', desc: '全面防御', atkBonus: 2, defBonus: 6, maxLevel: 10, color: '#3b82f6' },
+            { id: 'nine_stars', name: '九星连珠', desc: '爆发型功法', atkBonus: 8, defBonus: 3, maxLevel: 10, color: '#fbbf24' },
+            { id: 'void_step', name: '虚空步', desc: '闪避型功法', atkBonus: 3, defBonus: 5, maxLevel: 10, color: '#8b5cf6' },
+            { id: 'thunder_blade', name: '雷霆刀法', desc: '雷属性功法', atkBonus: 7, defBonus: 2, maxLevel: 10, color: '#facc15' },
+            { id: 'phoenix_flame', name: '凤凰涅槃', desc: '浴火重生功法', atkBonus: 5, defBonus: 5, maxLevel: 10, color: '#fb923c' }
+        ];
+        
+        // 武器数据
+        const weapons = [
+            { id: 'wood_sword', name: '木剑', desc: '最基础的武器', atk: 5, quality: 1 },
+            { id: 'iron_sword', name: '铁剑', desc: '普通铁质长剑', atk: 10, quality: 1 },
+            { id: 'steel_sword', name: '精钢剑', desc: '精钢打造的利剑', atk: 18, quality: 2 },
+            { id: 'spirit_sword', name: '灵剑', desc: '蕴含灵气的宝剑', atk: 30, quality: 3 },
+            { id: 'flame_sword', name: '烈焰剑', desc: '火焰缠绕的神剑', atk: 45, quality: 4 },
+            { id: 'thunder_blade', name: '雷霆刀', desc: '雷霆之力凝聚的宝刀', atk: 60, quality: 5 },
+            { id: 'dragon_saber', name: '龙牙刀', desc: '以龙牙制成的魔刀', atk: 80, quality: 5 },
+            { id: 'immortal_sword', name: '仙剑', desc: '仙人遗留的神兵', atk: 100, quality: 5 }
+        ];
+        
+        // 防具数据
+        const armors = [
+            { id: 'cloth_robe', name: '布衣', desc: '最基础的防护', def: 3, quality: 1 },
+            { id: 'leather_armor', name: '皮甲', desc: '兽皮制作的护甲', def: 8, quality: 1 },
+            { id: 'iron_armor', name: '铁甲', desc: '铁片编织的铠甲', def: 15, quality: 2 },
+            { id: 'spirit_robe', name: '灵袍', desc: '蕴含灵力的道袍', def: 25, quality: 3 },
+            { id: 'jade_armor', name: '玉甲', desc: '玉石精华凝成的宝甲', def: 40, quality: 4 },
+            { id: 'dragon_scale', name: '龙鳞甲', desc: '真龙鳞片炼制的战甲', def: 55, quality: 5 },
+            { id: 'phoenix_feather', name: '凤凰羽衣', desc: '凤凰羽毛编织的仙衣', def: 70, quality: 5 },
+            { id: 'immortal_robe', name: '仙衣', desc: '仙人遗留的天衣', def: 90, quality: 5 }
+        ];
+        
+        // 法宝数据
+        const treasures = [
+            { id: 'wood_charm', name: '木符', desc: '最简单的护身符', atk: 2, def: 2, quality: 1 },
+            { id: 'paper_amulet', name: '纸符', desc: '书写了符咒的护符', atk: 5, def: 5, quality: 1 },
+            { id: 'iron_bell', name: '铁铃', desc: '能发出护体铃声', atk: 8, def: 10, quality: 2 },
+            { id: 'jade_ring', name: '玉环', desc: '灵玉雕成的法器', atk: 15, def: 15, quality: 3 },
+            { id: 'fire_bead', name: '火珠', desc: '蕴含真火的宝珠', atk: 30, def: 10, quality: 4 },
+            { id: 'ice_crystal', name: '寒冰镜', desc: '寒冰精华凝聚的镜子', atk: 10, def: 35, quality: 4 },
+            { id: 'thunder_orb', name: '雷珠', desc: '九天雷霆凝成的宝珠', atk: 45, def: 25, quality: 5 },
+            { id: 'yin_yang_pawn', name: '阴阳符', desc: '阴阳之力交织的仙符', atk: 35, def: 35, quality: 5 }
+        ];
+        
+        // 秘境数据
+        const dungeons = [
+            { id: 1, name: '新手洞府', level: 1, events: 3, timeCost: 1, boss: { name: '洞穴守卫', hp: 80, atk: 15, def: 8 }, rewards: { pills: ['hp_small', 'hp_medium', 'life_small'], techniques: ['basic_fist', 'iron_body'], weapons: ['wood_sword', 'iron_sword'], armors: ['cloth_robe', 'leather_armor'], treasures: ['wood_charm'] }, branches: ['左侧小径', '右侧山路', '直行大道'] },
+            { id: 2, name: '妖兽森林', level: 2, events: 4, timeCost: 2, boss: { name: '妖兽王', hp: 120, atk: 22, def: 12 }, rewards: { pills: ['hp_medium', 'hp_large', 'life_small'], techniques: ['fire_fist', 'ice_shield'], weapons: ['iron_sword', 'steel_sword'], armors: ['leather_armor', 'iron_armor'], treasures: ['paper_amulet', 'iron_bell'] }, branches: ['密林深处', '溪流小道', '高山路径'] },
+            { id: 3, name: '古墓遗迹', level: 3, events: 4, timeCost: 3, boss: { name: '古墓尸王', hp: 180, atk: 30, def: 18 }, rewards: { pills: ['hp_large', 'atk_small', 'life_medium'], techniques: ['dragon_strike'], weapons: ['steel_sword', 'spirit_sword'], armors: ['iron_armor', 'spirit_robe'], treasures: ['iron_bell', 'jade_ring'] }, branches: ['墓室左道', '墓室右道', '地下暗河'] },
+            { id: 4, name: '火焰山脉', level: 4, events: 5, timeCost: 4, boss: { name: '火焰巨灵', hp: 250, atk: 40, def: 22 }, rewards: { pills: ['hp_large', 'atk_small', 'def_small', 'life_medium'], techniques: ['fire_fist', 'nine_stars'], weapons: ['spirit_sword', 'flame_sword'], armors: ['spirit_robe', 'jade_armor'], treasures: ['fire_bead', 'jade_ring'] }, branches: ['岩浆河畔', '火山口', '熔岩洞穴'] },
+            { id: 5, name: '冰封雪原', level: 5, events: 5, timeCost: 5, boss: { name: '冰雪女王', hp: 320, atk: 48, def: 30 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_small', 'life_medium'], techniques: ['ice_shield', 'heavenly_shield'], weapons: ['flame_sword', 'thunder_blade'], armors: ['jade_armor', 'dragon_scale'], treasures: ['ice_crystal', 'thunder_orb'] }, branches: ['冰晶洞穴', '雪山之巅', '冰封湖面'] },
+            { id: 6, name: '雷霆之渊', level: 6, events: 6, timeCost: 6, boss: { name: '雷神', hp: 400, atk: 60, def: 35 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_medium', 'life_medium'], techniques: ['thunder_blade', 'void_step'], weapons: ['thunder_blade', 'dragon_saber'], armors: ['dragon_scale', 'phoenix_feather'], treasures: ['thunder_orb', 'yin_yang_pawn'] }, branches: ['雷云之中', '电光隧道', '雷霆祭坛'] },
+            { id: 7, name: '龙之巢穴', level: 7, events: 6, timeCost: 8, boss: { name: '上古巨龙', hp: 500, atk: 75, def: 45 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_medium', 'life_medium'], techniques: ['dragon_strike', 'phoenix_flame'], weapons: ['dragon_saber', 'immortal_sword'], armors: ['phoenix_feather', 'immortal_robe'], treasures: ['thunder_orb', 'yin_yang_pawn'] }, branches: ['龙蛋孵化室', '龙骸通道', '龙血池'] },
+            { id: 8, name: '凤凰涅槃地', level: 8, events: 7, timeCost: 10, boss: { name: '浴火凤凰', hp: 600, atk: 85, def: 50 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_medium', 'life_medium'], techniques: ['phoenix_flame', 'nine_stars'], weapons: ['immortal_sword'], armors: ['immortal_robe'], treasures: ['yin_yang_pawn'] }, branches: ['烈焰通道', '羽化之境', '涅槃祭坛'] },
+            { id: 9, name: '仙魔战场', level: 9, events: 7, timeCost: 12, boss: { name: '魔君', hp: 750, atk: 100, def: 60 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_medium', 'life_medium'], techniques: ['thunder_blade', 'phoenix_flame'], weapons: ['immortal_sword'], armors: ['immortal_robe'], treasures: ['yin_yang_pawn'] }, branches: ['魔军营地', '仙魔交界', '祭魔大厅'] },
+            { id: 10, name: '天道遗迹', level: 10, events: 8, timeCost: 15, boss: { name: '天道守护者', hp: 1000, atk: 120, def: 80 }, rewards: { pills: ['hp_large', 'atk_medium', 'def_medium', 'life_medium'], techniques: ['phoenix_flame', 'void_step'], weapons: ['immortal_sword'], armors: ['immortal_robe'], treasures: ['yin_yang_pawn'] }, branches: ['天道之门', '轮回之井', '本源之地'] }
+        ];
+        
+        // 秘境内事件
+        const realmEvents = {
+            pill: [
+                { text: '你发现了散落的丹药！', item: 'hp_small' },
+                { text: '石壁缝隙中藏着一瓶灵药', item: 'hp_medium' },
+                { text: '一处炼丹遗迹中找到了灵丹', item: 'hp_large' },
+                { text: '一位陨落修士的储物袋中有延寿丹', item: 'life_small' },
+                { text: '上古丹房里找到了长生丹', item: 'life_medium' },
+                { text: '一位陨落修士的储物袋中有聚灵丹', item: 'atk_small' },
+                { text: '上古丹房里找到了天元丹', item: 'atk_medium' },
+                { text: '灵草丛中发现护体丹', item: 'def_small' },
+                { text: '高人的遗物中有金刚丹', item: 'def_medium' }
+            ],
+            technique: [
+                { text: '石壁上刻着功法残篇', item: 'basic_fist' },
+                { text: '一位前辈的修炼心得', item: 'iron_body' },
+                { text: '瀑布后的石室中有功法', item: 'fire_fist' },
+                { text: '冰晶中封存的功法秘籍', item: 'ice_shield' },
+                { text: '古战场遗迹中的功法传承', item: 'dragon_strike' },
+                { text: '神殿中的防御功法', item: 'heavenly_shield' },
+                { text: '星空下领悟的功法', item: 'nine_stars' },
+                { text: '虚空中的功法印记', item: 'void_step' },
+                { text: '雷云中的功法感悟', item: 'thunder_blade' },
+                { text: '凤凰涅槃时的功法传承', item: 'phoenix_flame' }
+            ],
+            weapon: [
+                { text: '锈迹斑斑的古剑', item: 'iron_sword' },
+                { text: '保存在石棺中的利剑', item: 'steel_sword' },
+                { text: '散发灵气的宝剑', item: 'spirit_sword' },
+                { text: '火焰缭绕的神剑', item: 'flame_sword' },
+                { text: '雷霆凝聚的宝刀', item: 'thunder_blade' },
+                { text: '龙牙制成的魔刀', item: 'dragon_saber' }
+            ],
+            armor: [
+                { text: '破损的铁甲', item: 'iron_armor' },
+                { text: '灵光流转的道袍', item: 'spirit_robe' },
+                { text: '玉石精华凝成的宝甲', item: 'jade_armor' },
+                { text: '龙鳞制成的战甲', item: 'dragon_scale' },
+                { text: '凤凰羽毛编织的仙衣', item: 'phoenix_feather' }
+            ],
+            treasure: [
+                { text: '古朴的护身符', item: 'iron_bell' },
+                { text: '灵光内敛的玉环', item: 'jade_ring' },
+                { text: '火焰凝聚的宝珠', item: 'fire_bead' },
+                { text: '寒气逼人的冰镜', item: 'ice_crystal' },
+                { text: '雷霆凝聚的宝珠', item: 'thunder_orb' }
+            ],
+            enemy: [
+                { text: '一只妖兽从暗处扑出！', enemy: { name: '妖兽', hp: 40, atk: 12, def: 5 } },
+                { text: '一队骷髅守卫挡住了去路！', enemy: { name: '骷髅守卫', hp: 60, atk: 18, def: 8 } },
+                { text: '火焰精灵向你袭来！', enemy: { name: '火焰精灵', hp: 50, atk: 22, def: 6 } },
+                { text: '冰霜巨人从雪中升起！', enemy: { name: '冰霜巨人', hp: 80, atk: 25, def: 15 } },
+                { text: '雷霆傀儡被激活！', enemy: { name: '雷霆傀儡', hp: 100, atk: 35, def: 20 } }
+            ],
+            trap: [
+                { text: '你触发了机关陷阱！', damage: 30 },
+                { text: '地面突然塌陷！', damage: 25 },
+                { text: '毒雾突然弥漫！', damage: 40 },
+                { text: '飞箭从暗处射出！', damage: 35 }
+            ],
+            blessing: [
+                { text: '灵泉滋润了你的身体', reward: { hp: 40 } },
+                { text: '你吸收了残留的灵气', reward: { hp: 30, atk: 2 } },
+                { text: '一处祥瑞之地让你恢复了精神', reward: { hp: 50 } },
+                { text: '仙气缭绕，你的寿命增长了', reward: { life: 5 } }
+            ]
+        };
+
+        let gameState = {
+            year: 1, totalYears: 0, rebirths: 0, points: 0,
+            hp: 100, maxHp: 100, attack: 10, defense: 5, realm: 0,
+            lifespan: 100, maxLifespan: 100,
+            upgrades: { hp: 0, atk: 0, def: 0, life: 0 },
+            log: [],
+            inventory: { pills: {}, techniques: {}, weapons: {}, armors: {}, treasures: {} },
+            equippedTechniques: [null, null, null],
+            equippedWeapon: null, equippedArmor: null, equippedTreasure: null,
+            inDungeon: false, currentDungeon: null, dungeonProgress: 0, dungeonBranches: [],
+            currentSaveSlot: null
+        };
+
+        // 存档系统
+        const MAX_SAVES = 5;
+        
+        function getAllSaves() {
+            const saves = [];
+            for (let i = 1; i <= MAX_SAVES; i++) {
+                const saveData = localStorage.getItem(`xiuxian_save_${i}`);
+                if (saveData) {
+                    saves.push({ slot: i, data: JSON.parse(saveData) });
+                }
+            }
+            return saves;
+        }
+        
+        function loadSave(slot) {
+            const saveData = localStorage.getItem(`xiuxian_save_${slot}`);
+            if (saveData) {
+                const data = JSON.parse(saveData);
+                gameState.upgrades = data.upgrades || { hp: 0, atk: 0, def: 0, life: 0 };
+                gameState.rebirths = data.rebirths || 0;
+                gameState.points = data.points || 0;
+                gameState.totalYears = data.totalYears || 0;
+                gameState.currentSaveSlot = slot;
+                return true;
+            }
+            return false;
+        }
+        
+        function saveCurrentGame() {
+            if (!gameState.currentSaveSlot) return;
+            const saveData = {
+                upgrades: gameState.upgrades,
+                rebirths: gameState.rebirths,
+                points: gameState.points,
+                totalYears: gameState.totalYears,
+                timestamp: Date.now(),
+                currentRealm: gameState.realm,
+                currentYear: gameState.year,
+                lifespan: gameState.lifespan,
+                maxLifespan: gameState.maxLifespan
+            };
+            localStorage.setItem(`xiuxian_save_${gameState.currentSaveSlot}`, JSON.stringify(saveData));
+        }
+        
+        function createNewSave(slot) {
+            const newSave = {
+                upgrades: { hp: 0, atk: 0, def: 0, life: 0 },
+                rebirths: 0,
+                points: 0,
+                totalYears: 0,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(`xiuxian_save_${slot}`, JSON.stringify(newSave));
+            gameState.currentSaveSlot = slot;
+            gameState.upgrades = newSave.upgrades;
+            gameState.rebirths = 0;
+            gameState.points = 0;
+            gameState.totalYears = 0;
+        }
+        
+        function deleteSave(slot) {
+            localStorage.removeItem(`xiuxian_save_${slot}`);
+            if (gameState.currentSaveSlot === slot) {
+                gameState.currentSaveSlot = null;
+            }
+        }
+        
+        function openSaveModal() {
+            const container = document.getElementById('saveList');
+            let html = '';
+            
+            for (let i = 1; i <= MAX_SAVES; i++) {
+                const saveData = localStorage.getItem(`xiuxian_save_${i}`);
+                if (saveData) {
+                    const data = JSON.parse(saveData);
+                    const date = new Date(data.timestamp).toLocaleString();
+                    const isCurrent = gameState.currentSaveSlot === i;
+                    html += `<div class="save-item ${isCurrent ? 'current' : ''}">
+                        <div class="save-name">存档 ${i} ${isCurrent ? '(当前)' : ''}</div>
+                        <div class="save-info">重生: ${data.rebirths || 0} | 仙缘点: ${data.points || 0} | 总年数: ${data.totalYears || 0}</div>
+                        <div class="save-info">保存时间: ${date}</div>
+                        <div class="save-actions">
+                            <button class="btn btn-primary save-btn-small" onclick="loadSaveAndStart(${i})">读取</button>
+                            <button class="btn btn-secondary save-btn-small" onclick="saveToSlot(${i})">保存</button>
+                            <button class="btn btn-danger save-btn-small" onclick="deleteSaveAndRefresh(${i})">删除</button>
+                        </div>
+                    </div>`;
+                } else {
+                    html += `<div class="save-item">
+                        <div class="save-name">存档 ${i} (空)</div>
+                        <div class="save-info">点击新建存档开始游戏</div>
+                        <div class="save-actions">
+                            <button class="btn btn-primary save-btn-small" onclick="createAndStart(${i})">新建</button>
+                        </div>
+                    </div>`;
+                }
+            }
+            
+            container.innerHTML = html;
+            document.getElementById('saveModal').classList.remove('hidden');
+        }
+        
+        function loadSaveAndStart(slot) {
+            if (loadSave(slot)) {
+                document.getElementById('saveModal').classList.add('hidden');
+                initNewLife();
+                updateUI();
+                document.getElementById('story').innerHTML = '读取存档成功！<br><span class="highlight">你重新踏上了修仙之路。</span>';
+            }
+        }
+        
+        function saveToSlot(slot) {
+            gameState.currentSaveSlot = slot;
+            saveCurrentGame();
+            openSaveModal();
+        }
+        
+        function createAndStart(slot) {
+            createNewSave(slot);
+            document.getElementById('saveModal').classList.add('hidden');
+            initNewLife();
+            updateUI();
+            document.getElementById('story').innerHTML = '新建存档成功！<br><span class="highlight">这是你踏上修仙之路的第一年。</span>';
+        }
+        
+        function deleteSaveAndRefresh(slot) {
+            deleteSave(slot);
+            openSaveModal();
+        }
+
+        function initNewLife() {
+            const baseHp = 100 + gameState.upgrades.hp * 20;
+            const baseAtk = 10 + gameState.upgrades.atk * 3;
+            const baseDef = 5 + gameState.upgrades.def * 2;
+            const baseLife = 100 + gameState.upgrades.life * 50;
+            
+            gameState.year = 1;
+            gameState.hp = baseHp;
+            gameState.maxHp = baseHp;
+            gameState.attack = baseAtk;
+            gameState.defense = baseDef;
+            gameState.realm = 0;
+            gameState.lifespan = baseLife;
+            gameState.maxLifespan = baseLife;
+            gameState.inventory = { pills: {}, techniques: {}, weapons: {}, armors: {}, treasures: {} };
+            gameState.equippedTechniques = [null, null, null];
+            gameState.equippedWeapon = null;
+            gameState.equippedArmor = null;
+            gameState.equippedTreasure = null;
+            gameState.inDungeon = false;
+            gameState.currentDungeon = null;
+            gameState.dungeonProgress = 0;
+            gameState.dungeonBranches = [];
+            gameState.log = [];
+        }
+
+        function getTechniquePower() {
+            let total = 0;
+            gameState.equippedTechniques.forEach(tech => {
+                if (tech) {
+                    const techData = techniques.find(t => t.id === tech.id);
+                    if (techData) total += (techData.atkBonus + techData.defBonus) * tech.level;
+                }
+            });
+            return total;
+        }
+
+        function getEquipPower() {
+            let atk = 0, def = 0;
+            if (gameState.equippedWeapon) {
+                const w = weapons.find(x => x.id === gameState.equippedWeapon);
+                if (w) atk += w.atk;
+            }
+            if (gameState.equippedArmor) {
+                const a = armors.find(x => x.id === gameState.equippedArmor);
+                if (a) def += a.def;
+            }
+            if (gameState.equippedTreasure) {
+                const t = treasures.find(x => x.id === gameState.equippedTreasure);
+                if (t) { atk += t.atk; def += t.def; }
+            }
+            return { atk, def };
+        }
+
+        function getTotalAttack() { return gameState.attack + Math.floor(getTechniquePower() * 0.6) + getEquipPower().atk; }
+        function getTotalDefense() { return gameState.defense + Math.floor(getTechniquePower() * 0.4) + getEquipPower().def; }
+
+        function updateUI() {
+            document.getElementById('level').textContent = realms[gameState.realm];
+            document.getElementById('hp').textContent = `${gameState.hp}/${gameState.maxHp}`;
+            document.getElementById('attack').textContent = getTotalAttack();
+            document.getElementById('defense').textContent = getTotalDefense();
+            document.getElementById('techniquePower').textContent = `+${getTechniquePower()}`;
+            document.getElementById('equipPower').textContent = `+${getEquipPower().atk}/${getEquipPower().def}`;
+            document.getElementById('lifespan').textContent = `${gameState.lifespan}/${gameState.maxLifespan}`;
+            document.getElementById('day').textContent = `第${gameState.year}年`;
+            document.getElementById('totalYears').textContent = `总年数: ${gameState.totalYears}`;
+            document.getElementById('rebirths').textContent = `重生: ${gameState.rebirths}`;
+            document.getElementById('points').textContent = `仙缘点: ${gameState.points}`;
+            document.getElementById('currentRealm').textContent = gameState.inDungeon ? `秘境: ${gameState.currentDungeon.name}` : '未进入秘境';
+            document.getElementById('saveSlot').textContent = gameState.currentSaveSlot ? `存档: ${gameState.currentSaveSlot}` : '存档: 未选择';
+            
+            // 寿命警告
+            const lifespanEl = document.getElementById('lifespan');
+            if (gameState.lifespan <= gameState.maxLifespan * 0.2) {
+                lifespanEl.style.color = '#ef4444';
+            } else if (gameState.lifespan <= gameState.maxLifespan * 0.5) {
+                lifespanEl.style.color = '#fbbf24';
+            } else {
+                lifespanEl.style.color = '#ef4444';
+            }
+            
+            const invCount = Object.values(gameState.inventory.pills).reduce((a, b) => a + b, 0) + 
+                            Object.values(gameState.inventory.techniques).length +
+                            Object.keys(gameState.inventory.weapons).length +
+                            Object.keys(gameState.inventory.armors).length +
+                            Object.keys(gameState.inventory.treasures).length;
+            document.getElementById('invCount').textContent = invCount;
+            
+            document.getElementById('log').innerHTML = gameState.log.slice(-8).map((entry, i) => 
+                `<div class="log-entry${i === gameState.log.length - 1 ? ' new' : ''}">${entry}</div>`
+            ).join('');
+            
+            document.getElementById('mainActions').style.display = gameState.inDungeon ? 'none' : 'block';
+            document.getElementById('realmActions').style.display = gameState.inDungeon ? 'block' : 'none';
+            
+            updateTechniqueSlots();
+            updateEquipmentSlots();
+            
+            if (!document.getElementById('inventoryModal').classList.contains('hidden')) {
+                const activeTab = document.querySelector('#inventoryModal .tab-btn.active');
+                if (activeTab) {
+                    const tabIdMap = { 'tabPills': 'pills', 'tabTechniques': 'techniques', 'tabWeapons': 'weapons', 'tabArmors': 'armors', 'tabTreasures': 'treasures' };
+                    const tabId = tabIdMap[activeTab.id] || 'pills';
+                    renderInventory(tabId);
+                }
+            }
+        }
+
+        function updateTechniqueSlots() {
+            const container = document.getElementById('techniqueSlots');
+            let html = '';
+            for (let i = 0; i < 3; i++) {
+                const tech = gameState.equippedTechniques[i];
+                if (tech) {
+                    const techData = techniques.find(t => t.id === tech.id);
+                    html += `<div class="technique-slot filled"><div class="slot-name">${techData.name}</div><div class="slot-level">等级: ${tech.level}/${techData.maxLevel}</div><div class="slot-bonus">攻+${techData.atkBonus * tech.level} 防+${techData.defBonus * tech.level}</div><button class="cultivate-btn" onclick="cultivateTechnique(${i})">修炼</button></div>`;
+                } else {
+                    html += `<div class="technique-slot"><div style="color: #666;">空缺</div><div style="color: #888; font-size: 0.75em;">装备功法</div></div>`;
+                }
+            }
+            container.innerHTML = html;
+        }
+
+        function updateEquipmentSlots() {
+            const container = document.getElementById('equipmentSlots');
+            const w = gameState.equippedWeapon ? weapons.find(x => x.id === gameState.equippedWeapon) : null;
+            const a = gameState.equippedArmor ? armors.find(x => x.id === gameState.equippedArmor) : null;
+            const t = gameState.equippedTreasure ? treasures.find(x => x.id === gameState.equippedTreasure) : null;
+            
+            container.innerHTML = `
+                <div class="equipment-slot ${w ? 'filled' : ''}">
+                    <div class="slot-type">武器</div>
+                    ${w ? `<div class="slot-name">${w.name}</div><div class="slot-bonus">攻击+${w.atk}</div>` : '<div style="color: #666;">未装备</div>'}
+                </div>
+                <div class="equipment-slot ${a ? 'filled' : ''}">
+                    <div class="slot-type">防具</div>
+                    ${a ? `<div class="slot-name">${a.name}</div><div class="slot-bonus">防御+${a.def}</div>` : '<div style="color: #666;">未装备</div>'}
+                </div>
+                <div class="equipment-slot ${t ? 'filled' : ''}">
+                    <div class="slot-type">法宝</div>
+                    ${t ? `<div class="slot-name">${t.name}</div><div class="slot-bonus">攻+${t.atk} 防+${t.def}</div>` : '<div style="color: #666;">未装备</div>'}
+                </div>
+            `;
+        }
+
+        function addLog(text) {
+            const time = `[第${gameState.year}年]`;
+            gameState.log.push(`${time} ${text}`);
+            updateUI();
+        }
+
+        function consumeTime(years) {
+            gameState.year += years;
+            gameState.lifespan -= years;
+            gameState.totalYears += years;
+            checkLifespanEnd();
+            checkLevelUp();
+            saveCurrentGame();
+        }
+
+        function checkLifespanEnd() {
+            if (gameState.lifespan <= 0) {
+                gameState.lifespan = 0;
+                triggerRebirth('寿命耗尽', '你的寿元已尽，大道无情...');
+            }
+        }
+
+        function triggerRebirth(title, reason) {
+            gameState.hp = 0;
+            gameState.totalYears += gameState.year;
+            const earned = Math.floor(gameState.year / 5) + gameState.realm * 2 + 1;
+            gameState.points += earned;
+            gameState.rebirths++;
+            gameState.inDungeon = false;
+            
+            document.getElementById('deathTitle').textContent = title;
+            document.getElementById('deathReason').textContent = reason;
+            document.getElementById('survivedYears').textContent = gameState.year;
+            document.getElementById('earnedPoints').textContent = earned;
+            document.getElementById('deathModal').classList.remove('hidden');
+            
+            updateUpgradeButtons();
+            saveCurrentGame();
+        }
+
+        function addItem(itemId, type) {
+            if (type === 'pill') {
+                gameState.inventory.pills[itemId] = (gameState.inventory.pills[itemId] || 0) + 1;
+            } else if (type === 'technique') {
+                if (!gameState.inventory.techniques[itemId]) {
+                    gameState.inventory.techniques[itemId] = { id: itemId, level: 1 };
+                    addLog(`获得功法：${techniques.find(t => t.id === itemId).name}！`);
+                } else {
+                    const tech = gameState.inventory.techniques[itemId];
+                    const techData = techniques.find(t => t.id === itemId);
+                    if (tech.level < techData.maxLevel) {
+                        tech.level++;
+                        addLog(`功法《${techData.name}》等级提升至${tech.level}！`);
+                    }
+                }
+            } else if (type === 'weapon') {
+                gameState.inventory.weapons[itemId] = { id: itemId };
+                addLog(`获得武器：${weapons.find(w => w.id === itemId).name}！`);
+            } else if (type === 'armor') {
+                gameState.inventory.armors[itemId] = { id: itemId };
+                addLog(`获得防具：${armors.find(a => a.id === itemId).name}！`);
+            } else if (type === 'treasure') {
+                gameState.inventory.treasures[itemId] = { id: itemId };
+                addLog(`获得法宝：${treasures.find(t => t.id === itemId).name}！`);
+            }
+            updateUI();
+        }
+
+        function usePill(pillId) {
+            const pill = pills.find(p => p.id === pillId);
+            if (!pill || !gameState.inventory.pills[pillId]) return;
+            if (pill.effect === 'hp') {
+                gameState.hp = Math.min(gameState.hp + pill.value, gameState.maxHp);
+                addLog(`使用了${pill.name}，恢复${pill.value}点生命！`);
+            } else if (pill.effect === 'life') {
+                gameState.lifespan += pill.value;
+                gameState.maxLifespan += pill.value;
+                addLog(`使用了${pill.name}，增加${pill.value}年寿命！`);
+            } else if (pill.effect === 'atk') {
+                gameState.attack += pill.value;
+                addLog(`使用了${pill.name}，永久增加${pill.value}点攻击！`);
+            } else if (pill.effect === 'def') {
+                gameState.defense += pill.value;
+                addLog(`使用了${pill.name}，永久增加${pill.value}点防御！`);
+            }
+            gameState.inventory.pills[pillId]--;
+            if (gameState.inventory.pills[pillId] <= 0) delete gameState.inventory.pills[pillId];
+            updateUI();
+        }
+
+        function equipTechnique(techId) {
+            const emptySlot = gameState.equippedTechniques.findIndex(t => t === null);
+            if (emptySlot !== -1) {
+                const tech = gameState.inventory.techniques[techId];
+                if (tech) {
+                    gameState.equippedTechniques[emptySlot] = { id: techId, level: tech.level };
+                    addLog(`装备了功法：${techniques.find(t => t.id === techId).name}！`);
+                    updateUI();
+                }
+            }
+        }
+
+        function cultivateTechnique(index) {
+            const tech = gameState.equippedTechniques[index];
+            if (!tech) return;
+            const techData = techniques.find(t => t.id === tech.id);
+            if (tech.level < techData.maxLevel) {
+                tech.level++;
+                gameState.inventory.techniques[tech.id].level = tech.level;
+                addLog(`修炼《${techData.name}》，等级提升至${tech.level}！消耗1年寿命`);
+                consumeTime(1);
+                updateUI();
+            } else {
+                addLog(`《${techData.name}》已达满级！`);
+            }
+        }
+
+        function equipItem(type, itemId) {
+            if (type === 'weapon') {
+                gameState.equippedWeapon = itemId;
+                addLog(`装备了武器：${weapons.find(w => w.id === itemId).name}！`);
+            } else if (type === 'armor') {
+                gameState.equippedArmor = itemId;
+                addLog(`装备了防具：${armors.find(a => a.id === itemId).name}！`);
+            } else if (type === 'treasure') {
+                gameState.equippedTreasure = itemId;
+                addLog(`装备了法宝：${treasures.find(t => t.id === itemId).name}！`);
+            }
+            updateUI();
+        }
+
+        function battle(enemy) {
+            addLog(`与 ${enemy.name} 展开激战！`);
+            const maxHp = enemy.hp;
+            while (gameState.hp > 0 && enemy.hp > 0) {
+                const playerDamage = Math.max(1, getTotalAttack() - enemy.def);
+                enemy.hp -= playerDamage;
+                addLog(`你对 ${enemy.name} 造成 ${playerDamage} 点伤害！`);
+                if (enemy.hp <= 0) {
+                    addLog(`击杀了 ${enemy.name}！`);
+                    const expBonus = Math.floor(maxHp / 15) + 2;
+                    gameState.attack += expBonus;
+                    addLog(`获得精进！攻击力 +${expBonus}`);
+                    break;
+                }
+                const enemyDamage = Math.max(1, enemy.atk - getTotalDefense());
+                gameState.hp -= enemyDamage;
+                addLog(`${enemy.name} 对你造成 ${enemyDamage} 点伤害！`);
+            }
+            if (gameState.hp <= 0) {
+                triggerRebirth('战斗失败', '你在战斗中陨落...');
+            }
+        }
+
+        function checkLevelUp() {
+            const expRequired = (gameState.realm + 1) * 15;
+            if (gameState.year >= expRequired && gameState.realm < realms.length - 1) {
+                gameState.realm++;
+                gameState.maxHp += 25;
+                gameState.hp = gameState.maxHp;
+                gameState.attack += 5;
+                gameState.defense += 3;
+                // 境界提升增加寿命上限
+                const newMaxLife = realmLifespanBonus[gameState.realm];
+                const lifeIncrease = newMaxLife - gameState.maxLifespan;
+                gameState.maxLifespan = newMaxLife;
+                gameState.lifespan += lifeIncrease;
+                addLog(`【境界突破】你进入了 ${realms[gameState.realm]}！寿命上限增加${lifeIncrease}年！`);
+            }
+        }
+
+        function updateUpgradeButtons() {
+            document.querySelectorAll('.upgrade-btn').forEach(btn => {
+                btn.disabled = gameState.points < parseInt(btn.dataset.cost);
+            });
+        }
+
+        // 秘境系统
+        function openRealmModal() {
+            const container = document.getElementById('realmList');
+            let html = '';
+            dungeons.forEach(d => {
+                const unlocked = gameState.realm >= d.level - 1 || gameState.rebirths >= d.id;
+                html += `<div class="realm-item ${unlocked ? '' : 'locked'}" onclick="${unlocked ? `enterDungeon(${d.id})` : ''}">
+                    <div class="realm-name">${d.name}</div>
+                    <div class="realm-level">难度: ${'★'.repeat(d.level)} | 消耗: ${d.timeCost}年</div>
+                    <div class="realm-reward">BOSS: ${d.boss.name}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            document.getElementById('realmModal').classList.remove('hidden');
+        }
+
+        function enterDungeon(id) {
+            const dungeon = dungeons.find(d => d.id === id);
+            if (!dungeon) return;
+            if (gameState.lifespan < dungeon.timeCost) {
+                addLog(`寿命不足，无法进入${dungeon.name}！需要${dungeon.timeCost}年寿命`);
+                return;
+            }
+            
+            gameState.inDungeon = true;
+            gameState.currentDungeon = dungeon;
+            gameState.dungeonProgress = 0;
+            gameState.dungeonBranches = [...dungeon.branches];
+            
+            consumeTime(dungeon.timeCost);
+            document.getElementById('realmModal').classList.add('hidden');
+            document.getElementById('story').innerHTML = `你踏入了<span class="highlight">${dungeon.name}</span>，消耗了${dungeon.timeCost}年寿命。<br>击败深处的<span class="danger">${dungeon.boss.name}</span>才能离开。`;
+            addLog(`进入了秘境：${dungeon.name}，消耗${dungeon.timeCost}年寿命`);
+            updateUI();
+        }
+
+        function continueExplore() {
+            if (!gameState.currentDungeon) return;
+            if (gameState.lifespan < 1) {
+                addLog('寿命不足，无法继续探索！');
+                exitDungeon();
+                return;
+            }
+            
+            const dungeon = gameState.currentDungeon;
+            gameState.dungeonProgress++;
+            consumeTime(1);
+            
+            if (gameState.dungeonProgress >= dungeon.events) {
+                startBossFight();
+            } else {
+                const eventTypes = Object.keys(realmEvents);
+                const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                const events = realmEvents[eventType];
+                const event = events[Math.floor(Math.random() * events.length)];
+                
+                document.getElementById('story').innerHTML = event.text;
+                addLog(event.text.replace(/<[^>]*>/g, ''));
+                
+                if (event.item) {
+                    const pill = pills.find(p => p.id === event.item);
+                    const technique = techniques.find(t => t.id === event.item);
+                    const weapon = weapons.find(w => w.id === event.item);
+                    const armor = armors.find(a => a.id === event.item);
+                    const treasure = treasures.find(t => t.id === event.item);
+                    
+                    if (pill) addItem(event.item, 'pill');
+                    else if (technique) addItem(event.item, 'technique');
+                    else if (weapon) addItem(event.item, 'weapon');
+                    else if (armor) addItem(event.item, 'armor');
+                    else if (treasure) addItem(event.item, 'treasure');
+                }
+                
+                if (event.enemy) battle(event.enemy);
+                if (event.damage) {
+                    gameState.hp -= event.damage;
+                    addLog(`受到 ${event.damage} 点伤害！`);
+                    if (gameState.hp <= 0) triggerRebirth('秘境陨落', '你在秘境中遭遇不幸...');
+                }
+                if (event.reward && event.reward.hp) gameState.hp = Math.min(gameState.hp + event.reward.hp, gameState.maxHp);
+                if (event.reward && event.reward.atk) gameState.attack += event.reward.atk;
+                if (event.reward && event.reward.life) {
+                    gameState.lifespan += event.reward.life;
+                    gameState.maxLifespan += event.reward.life;
+                    addLog(`寿命增加 ${event.reward.life} 年！`);
+                }
+                
+                updateUI();
+            }
+        }
+
+        function showBranches() {
+            if (!gameState.currentDungeon) return;
+            const container = document.getElementById('branchChoices');
+            let html = '';
+            gameState.dungeonBranches.forEach((branch, i) => {
+                html += `<button class="branch-btn" onclick="chooseBranch(${i})">${branch} (消耗1年寿命)</button>`;
+            });
+            container.innerHTML = html;
+            document.getElementById('branchPanel').style.display = 'block';
+        }
+
+        function chooseBranch(index) {
+            if (gameState.lifespan < 1) {
+                addLog('寿命不足，无法选择岔路！');
+                document.getElementById('branchPanel').style.display = 'none';
+                return;
+            }
+            
+            const dungeon = gameState.currentDungeon;
+            const branch = gameState.dungeonBranches[index];
+            gameState.dungeonBranches.splice(index, 1);
+            consumeTime(1);
+            
+            const branchEvent = Math.random();
+            if (branchEvent < 0.3) {
+                const rewards = dungeon.rewards;
+                const rewardTypes = Object.keys(rewards);
+                const rewardType = rewardTypes[Math.floor(Math.random() * rewardTypes.length)];
+                const rewardItems = rewards[rewardType];
+                const rewardItem = rewardItems[Math.floor(Math.random() * rewardItems.length)];
+                
+                addLog(`你选择了${branch}，发现了机遇！`);
+                if (rewardType === 'pills') addItem(rewardItem, 'pill');
+                else if (rewardType === 'techniques') addItem(rewardItem, 'technique');
+                else if (rewardType === 'weapons') addItem(rewardItem, 'weapon');
+                else if (rewardType === 'armors') addItem(rewardItem, 'armor');
+                else if (rewardType === 'treasures') addItem(rewardItem, 'treasure');
+                
+                document.getElementById('story').innerHTML = `你选择了<span class="highlight">${branch}</span>，发现了一处宝地！`;
+            } else if (branchEvent < 0.7) {
+                const enemy = dungeon.boss;
+                const scaledEnemy = { name: enemy.name + '(虚影)', hp: Math.floor(enemy.hp * 0.3), atk: Math.floor(enemy.atk * 0.5), def: Math.floor(enemy.def * 0.5) };
+                addLog(`你选择了${branch}，遭遇了敌人！`);
+                document.getElementById('story').innerHTML = `你选择了<span class="highlight">${branch}</span>，<span class="danger">${scaledEnemy.name}</span>出现了！`;
+                battle(scaledEnemy);
+            } else {
+                const damage = 20 + dungeon.level * 5;
+                addLog(`你选择了${branch}，触发了陷阱！`);
+                gameState.hp -= damage;
+                document.getElementById('story').innerHTML = `你选择了<span class="highlight">${branch}</span>，触发了机关陷阱，受到 ${damage} 点伤害！`;
+                if (gameState.hp <= 0) triggerRebirth('秘境陨落', '你在秘境中遭遇不幸...');
+            }
+            
+            document.getElementById('branchPanel').style.display = 'none';
+            updateUI();
+        }
+
+        function startBossFight() {
+            const dungeon = gameState.currentDungeon;
+            const boss = dungeon.boss;
+            document.getElementById('story').innerHTML = `<div class="boss-info"><div class="boss-name">⚔️ ${boss.name} ⚔️</div><div class="boss-stats">生命: ${boss.hp} | 攻击: ${boss.atk} | 防御: ${boss.def}</div></div>BOSS战！击败它就能通关秘境！`;
+            addLog(`BOSS战开始：${boss.name}！`);
+            
+            const scaledBoss = { ...boss, hp: boss.hp + gameState.dungeonProgress * 10 };
+            battle(scaledBoss);
+            
+            if (gameState.hp > 0) {
+                addLog(`击败了 ${boss.name}！通关秘境！`);
+                
+                const rewards = dungeon.rewards;
+                const rewardCount = Math.min(3, dungeon.level);
+                
+                const guaranteedRewards = [
+                    rewards.techniques[Math.floor(Math.random() * rewards.techniques.length)],
+                    rewards.weapons[Math.floor(Math.random() * rewards.weapons.length)],
+                    rewards.armors[Math.floor(Math.random() * rewards.armors.length)]
+                ];
+                
+                addLog(`获得秘境奖励！`);
+                guaranteedRewards.forEach(item => {
+                    if (weapons.find(w => w.id === item)) addItem(item, 'weapon');
+                    else if (armors.find(a => a.id === item)) addItem(item, 'armor');
+                    else addItem(item, 'technique');
+                });
+                
+                for (let i = 0; i < rewardCount; i++) {
+                    const types = ['pills', 'treasures'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    const items = rewards[type];
+                    const item = items[Math.floor(Math.random() * items.length)];
+                    if (pills.find(p => p.id === item)) addItem(item, 'pill');
+                    else addItem(item, 'treasure');
+                }
+                
+                gameState.inDungeon = false;
+                gameState.currentDungeon = null;
+            }
+            
+            updateUI();
+        }
+
+        function exitDungeon() {
+            gameState.inDungeon = false;
+            gameState.currentDungeon = null;
+            gameState.dungeonProgress = 0;
+            document.getElementById('story').innerHTML = '你离开了秘境。<br><span class="highlight">下次再来挑战吧！</span>';
+            addLog('离开了秘境');
+            updateUI();
+        }
+
+        function meditate() {
+            if (gameState.lifespan < 1) {
+                addLog('寿命不足，无法打坐修炼！');
+                return;
+            }
+            
+            const texts = ['你开始打坐修炼，灵气缓缓涌入体内...', '心神宁静，天地灵气在你周身流转...', '体内灵力逐渐壮大，境界有所精进...', '感悟天地至理，修为更上一层楼...'];
+            document.getElementById('story').innerHTML = texts[Math.floor(Math.random() * texts.length)];
+            addLog('打坐修炼，消耗1年寿命');
+            
+            consumeTime(1);
+            gameState.hp = Math.min(gameState.hp + 20, gameState.maxHp);
+            gameState.attack += 1;
+            
+            let cultivated = false;
+            gameState.equippedTechniques.forEach(tech => {
+                if (tech) {
+                    const techData = techniques.find(t => t.id === tech.id);
+                    if (tech.level < techData.maxLevel && Math.random() < 0.2) {
+                        tech.level++;
+                        gameState.inventory.techniques[tech.id].level = tech.level;
+                        cultivated = true;
+                    }
+                }
+            });
+            if (cultivated) addLog('功法修炼有所精进！');
+            
+            updateUI();
+        }
+
+        function rebirth() {
+            triggerRebirth('主动重生', '你选择结束这一世的修行...');
+        }
+
+        // 背包/装备UI
+        function openInventory(tab = 'pills') {
+            document.getElementById('inventoryModal').classList.remove('hidden');
+            renderInventory(tab);
+        }
+
+        function renderInventory(tab) {
+            const content = document.getElementById('inventoryContent');
+            document.querySelectorAll('#inventoryModal .tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const tabIdMap = { 'pills': 'tabPills', 'techniques': 'tabTechniques', 'weapons': 'tabWeapons', 'armors': 'tabArmors', 'treasures': 'tabTreasures' };
+            document.getElementById(tabIdMap[tab]).classList.add('active');
+            
+            let html = '';
+            const items = tab === 'pills' ? gameState.inventory.pills :
+                         tab === 'techniques' ? gameState.inventory.techniques :
+                         tab === 'weapons' ? gameState.inventory.weapons :
+                         tab === 'armors' ? gameState.inventory.armors :
+                         gameState.inventory.treasures;
+            
+            if (Object.keys(items).length === 0) {
+                html = '<div class="empty-text">背包中没有物品</div>';
+            } else {
+                if (tab === 'pills') {
+                    Object.entries(items).forEach(([pillId, count]) => {
+                        const pill = pills.find(p => p.id === pillId);
+                        if (pill) {
+                            html += `<div class="inventory-item pill"><div><div class="item-name" style="color: ${pill.color}">${pill.name}</div><div class="item-desc">${pill.desc}</div></div><div style="display:flex;align-items:center;gap:8px;"><span class="item-count">x${count}</span><button class="use-btn" onclick="usePill('${pillId}')">使用</button></div></div>`;
+                        }
+                    });
+                } else {
+                    Object.values(items).forEach(item => {
+                        if (tab === 'techniques') {
+                            const tech = techniques.find(t => t.id === item.id);
+                            const isEquipped = gameState.equippedTechniques.some(t => t && t.id === item.id);
+                            html += `<div class="inventory-item technique ${isEquipped ? 'equipped' : ''}"><div><div class="item-name">${tech.name}</div><div class="item-desc">${tech.desc} | 等级: ${item.level}/${tech.maxLevel}</div><div class="item-desc" style="color: #ffd700;">攻击+${tech.atkBonus * item.level} 防御+${tech.defBonus * item.level}</div></div>${isEquipped ? '<span style="color: #a855f7;">已装备</span>' : `<button class="equip-btn" onclick="equipTechnique('${item.id}')">装备</button>`}</div>`;
+                        } else if (tab === 'weapons') {
+                            const weapon = weapons.find(w => w.id === item.id);
+                            const isEquipped = gameState.equippedWeapon === item.id;
+                            html += `<div class="inventory-item weapon ${isEquipped ? 'equipped' : ''}"><div><div class="item-name">${weapon.name}</div><div class="item-desc">${weapon.desc} | 品质: ${'★'.repeat(weapon.quality)}</div><div class="item-desc" style="color: #ffd700;">攻击+${weapon.atk}</div></div>${isEquipped ? '<span style="color: #f97316;">已装备</span>' : `<button class="equip-btn" onclick="openEquipModal('weapon', '${item.id}')">装备</button>`}</div>`;
+                        } else if (tab === 'armors') {
+                            const armor = armors.find(a => a.id === item.id);
+                            const isEquipped = gameState.equippedArmor === item.id;
+                            html += `<div class="inventory-item armor ${isEquipped ? 'equipped' : ''}"><div><div class="item-name">${armor.name}</div><div class="item-desc">${armor.desc} | 品质: ${'★'.repeat(armor.quality)}</div><div class="item-desc" style="color: #ffd700;">防御+${armor.def}</div></div>${isEquipped ? '<span style="color: #3b82f6;">已装备</span>' : `<button class="equip-btn" onclick="openEquipModal('armor', '${item.id}')">装备</button>`}</div>`;
+                        } else if (tab === 'treasures') {
+                            const treasure = treasures.find(t => t.id === item.id);
+                            const isEquipped = gameState.equippedTreasure === item.id;
+                            html += `<div class="inventory-item treasure ${isEquipped ? 'equipped' : ''}"><div><div class="item-name">${treasure.name}</div><div class="item-desc">${treasure.desc} | 品质: ${'★'.repeat(treasure.quality)}</div><div class="item-desc" style="color: #ffd700;">攻击+${treasure.atk} 防御+${treasure.def}</div></div>${isEquipped ? '<span style="color: #fbbf24;">已装备</span>' : `<button class="equip-btn" onclick="openEquipModal('treasure', '${item.id}')">装备</button>`}</div>`;
+                        }
+                    });
+                }
+            }
+            content.innerHTML = html;
+        }
+
+        function openEquipModal(type, itemId) {
+            equipItem(type, itemId);
+            document.getElementById('inventoryModal').classList.add('hidden');
+        }
+
+        // 事件绑定
+        document.getElementById('btnRealm').addEventListener('click', openRealmModal);
+        document.getElementById('btnMeditate').addEventListener('click', meditate);
+        document.getElementById('btnRebirth').addEventListener('click', rebirth);
+        document.getElementById('btnInventory').addEventListener('click', () => openInventory('pills'));
+        document.getElementById('btnSave').addEventListener('click', openSaveModal);
+        document.getElementById('btnCloseInventory').addEventListener('click', () => document.getElementById('inventoryModal').classList.add('hidden'));
+        document.getElementById('btnCloseRealm').addEventListener('click', () => document.getElementById('realmModal').classList.add('hidden'));
+        document.getElementById('btnCloseSave').addEventListener('click', () => document.getElementById('saveModal').classList.add('hidden'));
+        document.getElementById('btnNewSave').addEventListener('click', () => {
+            const emptySlot = [1,2,3,4,5].find(i => !localStorage.getItem(`xiuxian_save_${i}`));
+            if (emptySlot) createAndStart(emptySlot);
+            else addLog('存档位已满，请删除一个存档');
+        });
+        
+        document.getElementById('btnContinueExplore').addEventListener('click', continueExplore);
+        document.getElementById('btnViewBranches').addEventListener('click', showBranches);
+        document.getElementById('btnExitRealm').addEventListener('click', exitDungeon);
+        
+        document.getElementById('tabPills').addEventListener('click', () => renderInventory('pills'));
+        document.getElementById('tabTechniques').addEventListener('click', () => renderInventory('techniques'));
+        document.getElementById('tabWeapons').addEventListener('click', () => renderInventory('weapons'));
+        document.getElementById('tabArmors').addEventListener('click', () => renderInventory('armors'));
+        document.getElementById('tabTreasures').addEventListener('click', () => renderInventory('treasures'));
+        
+        document.getElementById('upgradeHp').addEventListener('click', () => { if (gameState.points >= 5) { gameState.points -= 5; gameState.upgrades.hp++; updateUpgradeButtons(); saveCurrentGame(); }});
+        document.getElementById('upgradeAtk').addEventListener('click', () => { if (gameState.points >= 5) { gameState.points -= 5; gameState.upgrades.atk++; updateUpgradeButtons(); saveCurrentGame(); }});
+        document.getElementById('upgradeDef').addEventListener('click', () => { if (gameState.points >= 5) { gameState.points -= 5; gameState.upgrades.def++; updateUpgradeButtons(); saveCurrentGame(); }});
+        document.getElementById('upgradeLife').addEventListener('click', () => { if (gameState.points >= 8) { gameState.points -= 8; gameState.upgrades.life++; updateUpgradeButtons(); saveCurrentGame(); }});
+        
+        document.getElementById('btnRebirthConfirm').addEventListener('click', () => {
+            document.getElementById('deathModal').classList.add('hidden');
+            initNewLife();
+            updateUI();
+            document.getElementById('story').innerHTML = '你睁开双眼，发现自己身处一座深山之中。灵气稀薄，但你能感受到体内微弱的灵力在流动。<br><span class="highlight">这是你踏上修仙之路的第一年。</span>';
+        });
+
+        // 初始化：显示存档选择
+        openSaveModal();
+    </script>
+</body>
+</html>
